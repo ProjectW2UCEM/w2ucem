@@ -1,2 +1,2 @@
 # w2ucem
-Windows to Unix* Compatible Environment Manager
+没错，几天开发出alpha并发布
