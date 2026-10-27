@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # --- Job 1: 构建 + 单测（Linux 含 ASan/UBSan 变体；macOS 只跑 core+cli） ---
+  build-and-unit:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            sanitizers: OFF
+          - os: ubuntu-latest
+            sanitizers: ON
+          - os: macos-latest
+            sanitizers: OFF
+            # macOS 构建路径为实验性：容器后端用 fake，不跑容器 e2e
+            cmake_args: -DW2UCEM_BUILD_TUI=OFF -DW2UCEM_BUILD_CAPI=OFF
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安装系统依赖（Linux）
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev zlib1g-dev
+      - name: 安装系统依赖（macOS）
+        if: runner.os == 'macOS'
+        run: brew install openssl
+      - name: 配置
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release \
+            -DW2UCEM_ENABLE_SANITIZERS=${{ matrix.sanitizers }} \
+            ${{ matrix.cmake_args }}
+      - name: 构建
+        run: cmake --build build -j2
+      - name: 单测
+        working-directory: build
+        run: ctest --output-on-failure
+
+  # --- Job 2: CLI 冒烟（fixtures 仓库全命令面 + 负例） ---
+  cli-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安装系统依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev zlib1g-dev
+      - name: 配置构建
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DW2UCEM_BUILD_TUI=OFF -DW2UCEM_BUILD_CAPI=OFF
+      - name: 构建
+        run: cmake --build build -j2 --target w2ucem-cli
+      - name: CLI 冒烟
+        run: ./tests/cli/smoke.sh build/src/cli/w2ucem-cli
+
+  # --- Job 3: 容器 e2e（digest 锁 + 容器装配 + dep-scan + 篡改/回退负例） ---
+  container-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安装系统依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev zlib1g-dev
+      - name: 配置构建
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DW2UCEM_BUILD_TUI=OFF -DW2UCEM_BUILD_CAPI=OFF
+      - name: 构建
+        run: cmake --build build -j2 --target w2ucem-cli
+      - name: 容器 e2e
+        run: ./tests/e2e/e2e.sh build/src/cli/w2ucem-cli
+
+  # --- Job 4: release-alpha（手动 / tag 触发） ---
+  release-alpha:
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安装系统依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev zlib1g-dev
+      - name: 配置构建
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DW2UCEM_BUILD_TESTS=OFF
+      - name: 构建
+        run: cmake --build build -j2
+      - name: 发布 alpha 产物
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/src/cli/w2ucem-cli
+            build/src/tui/w2ucem-tui
+          draft: true

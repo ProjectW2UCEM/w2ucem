@@ -1,0 +1,60 @@
+# W2UCEM 官方模板：nvidia-smoke（GPU 特调示例）
+# 演示 GPU 变体参数化：variant.nvidia 深合并覆盖 build_depends 与 manifest。
+# 本模板为示例，不跑真实驱动；用于验证变体合并语义与求值链路。
+# sha256/digest 为占位值，发布前锁定。
+
+[template]
+format = "0.1"
+id = "nvidia-smoke"
+name = "NVIDIA variant smoke (assembly)"
+version = "0.1"
+kind = "assembly"
+upstream = "https://github.com/w2ucem/examples"
+
+[meta]
+maintainer = "w2ucem team <dev@w2ucem.org>"
+license = "BSD-3-Clause"
+channels = ["semi-rolling", "stable"]
+gpu_variants = ["generic", "nvidia"]
+distro_families = ["arch", "deb"]
+
+[buildenv]
+image = "w2ucem/buildenv-alpine"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+
+[sources.smoke-data]
+urls = ["https://github.com/w2ucem/examples/releases/download/v0.1/smoke-data.tar.gz"]
+sha256 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+[build_depends]
+default = []
+arch = ["libx11"]
+deb = ["libx11-dev"]
+
+[[assemble.steps]]
+type = "extract"
+source = "smoke-data"
+to = "$build/src"
+
+[[assemble.steps]]
+type = "dep-scan"
+elfs = ["$build/src/bin/demo"]
+output = "dep-manifest.json"
+
+[[assemble.steps]]
+type = "manifest"
+required = ["$build/src/bin/demo", "dep-manifest.json"]
+
+# GPU 特调：nvidia 变体在 arch 上追加 nvidia 依赖（数组整体替换）
+[variant.nvidia]
+[variant.nvidia.build_depends]
+arch = ["libx11", "nvidia-utils"]
+deb = ["libx11-dev", "libnvidia-egl-wayland1"]
+
+[manifest]
+[[manifest.files]]
+path = "bin/demo"
+sha256 = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+[[manifest.files]]
+path = "dep-manifest.json"
+sha256 = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"

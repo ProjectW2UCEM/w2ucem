@@ -1,0 +1,24 @@
+# 构建产物
+build/
+build-*/
+cmake-build-*/
+
+# IDE
+.idea/
+.vscode/
+*.user
+cmake-build-debug/
+
+# macOS
+.DS_Store
+
+# 运行时数据目录（w2ucem --root 测试）
+.w2ucem-test/
+
+# 测试生成物（fixtures 由 gen_fixture_repo.sh 生成）
+tests/fixtures/repo/
+tests/fixtures/keys/
+tests/fixtures/mock_payload/
+
+# 本机 Claude Code 会话设置
+.claude/settings.local.json

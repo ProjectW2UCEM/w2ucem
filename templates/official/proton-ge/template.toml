@@ -1,0 +1,89 @@
+# W2UCEM 官方模板：Proton-GE（装配型）
+# 首个装配型模板：从上游拉取已发布二进制 → DLL 复写 → 依赖扫描装配。
+# 说明：
+#   - sha256 为占位值，发布前必须锁定真实值（用 `w2ucem fetch proton-ge` 的校验输出回填）。
+#   - buildenv.digest 为占位值，锁定真实 buildenv 镜像 digest 后回填。
+#   - 装配型产物字节跨发行版相同，发行版差异收敛到 dep-scan 步骤的依赖清单。
+
+[template]
+format = "0.1"
+id = "proton-ge"
+name = "Proton-GE (assembly)"
+version = "9.27"
+kind = "assembly"
+upstream = "https://github.com/GloriousEggroll/proton-ge-custom"
+
+[meta]
+maintainer = "w2ucem team <dev@w2ucem.org>"
+license = "BSD-3-Clause"
+channels = ["semi-rolling", "stable", "major"]
+gpu_variants = ["generic", "nvidia"]
+distro_families = ["arch", "deb", "rpm", "alpine"]
+
+[buildenv]
+image = "w2ucem/buildenv-alpine"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+
+[sources.ge-proton-9-27]
+urls = [
+  "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton9-27/GE-Proton9-27.tar.gz",
+  "https://mirror.w2ucem.org/proton-ge/GE-Proton9-27.tar.gz",
+]
+sha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+archive_id = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+[build_depends]
+default = []
+arch = ["libx11", "fontconfig", "lib32-fontconfig"]
+deb = ["libx11-dev", "libfontconfig1-dev"]
+rpm = ["libX11-devel", "fontconfig-devel"]
+
+[[assemble.steps]]
+type = "extract"
+source = "ge-proton-9-27"
+to = "$build/src"
+
+[[assemble.steps]]
+type = "dll-override"
+rules = [
+  "xaudio2_7=native,builtin",
+  "d3dcompiler_47=native,builtin",
+  "d3dcompiler_43=native,builtin",
+]
+output = "dll-overrides.json"
+
+[[assemble.steps]]
+type = "copy"
+from = "$build/src/files"
+to = "$prefix"
+
+[[assemble.steps]]
+type = "dep-scan"
+elfs = ["$prefix/files/bin/wine64", "$prefix/files/bin/wine"]
+output = "dep-manifest.json"
+
+[[assemble.steps]]
+type = "manifest"
+required = ["$prefix/files/bin/wine64", "dll-overrides.json", "dep-manifest.json"]
+
+[variant.nvidia]
+[variant.nvidia.build_depends]
+arch = ["nvidia-utils", "lib32-nvidia-utils"]
+
+[hooks]
+pre-assemble = { plugins = ["w2ucem-debug-log"] }
+post-assemble = { plugins = ["w2ucem-debug-log"] }
+
+[manifest]
+[[manifest.files]]
+path = "files/bin/wine64"
+sha256 = ""
+[[manifest.files]]
+path = "files/bin/wine"
+sha256 = ""
+[[manifest.files]]
+path = "dll-overrides.json"
+sha256 = ""
+[[manifest.files]]
+path = "dep-manifest.json"
+sha256 = ""

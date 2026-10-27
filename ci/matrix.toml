@@ -1,0 +1,20 @@
+# W2UCEM 发行版构建矩阵 → 镜像 digest 锁定表（随 w2ucem 版本锁定 SDK 层）。
+# dep-scan 专用镜像：需包含 readelf（binutils）。
+# digest 为占位值：官方发布矩阵镜像后锁定；CI e2e 用环境变量
+# W2UCEM_MATRIX_FILE 指向动态生成的矩阵表（本地构建镜像的 digest）。
+
+[deb]
+image = "w2ucem/matrix-debian"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+
+[rpm]
+image = "w2ucem/matrix-fedora"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+
+[arch]
+image = "w2ucem/matrix-archlinux"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+
+[alpine]
+image = "w2ucem/matrix-alpine"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"

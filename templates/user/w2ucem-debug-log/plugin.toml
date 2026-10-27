@@ -1,0 +1,16 @@
+# W2UCEM 示例插件：w2ucem-debug-log
+# 调试日志插件：在 pre-assemble 与 post-assemble 输出构建上下文。
+# 可复现性：payload 内容 sha256 由 PluginEngine 计算并入构建账本。
+
+[plugin]
+id = "w2ucem-debug-log"
+version = "0.1"
+hook = "pre-assemble"
+payload_kind = "exec-in-container"
+inputs = []
+outputs = []
+payload = """
+echo "[w2ucem plugin] pre-assemble: template=$W2UCEM_TEMPLATE target=$W2UCEM_TARGET"
+echo "[w2ucem plugin] build workspace:"
+ls -la /build
+"""
