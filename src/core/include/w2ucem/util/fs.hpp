@@ -15,6 +15,12 @@ namespace w2ucem::fs {
 
 [[nodiscard]] Result<std::string> read_file(const std::string& path);
 
+// 文件大小；不存在返回 0（续传状态机把缺失视为空 partial）。
+[[nodiscard]] Result<std::uintmax_t> file_size(const std::string& path);
+
+// 删除文件；不存在视为成功。
+[[nodiscard]] Result<void> remove_file(const std::string& path);
+
 [[nodiscard]] bool exists(const std::string& path);
 
 [[nodiscard]] bool is_dir(const std::string& path);

@@ -30,6 +30,7 @@ add_library(w2ucem_core STATIC
   src/build/ledger.cpp
   src/build/orchestrator.cpp
   src/verify/verifier.cpp
+  src/verify/symtab.cpp
   src/plugin/plugin.cpp
   src/plugin/engine.cpp
   src/usertemplate/meta.cpp

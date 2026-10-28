@@ -47,6 +47,9 @@ w2ucem build    → resolve_template（原始字节 sha256 校验）
 
 - **digest 锁**：模板声明 `buildenv.image + digest`，pull 后 inspect 实际 digest 比对，mismatch = 硬失败；矩阵镜像锁在编译进二进制的 `ci/matrix.toml`（SDK 层随版本锁定）。
 - **manifest 双模式**：pin（声明 sha256）与 record（账本首建记录/复建比对）；stable/major 通道禁 record。
+- **符号表校验**：`symtab` 作用域选择器（dyn/full）→ 容器内只跑一条原始 `readelf -Ws`（原始输出落 `.w2ucem/symtab-raw/`）→ 宿主规范化器（与 verify 共用同一实现：丢弃地址列、Ndx 归一化、排序去重）→ 快照 `.w2ucem/symtab/` → sha256 入账本；verify 用账本记录的 `buildenv_ref` 起容器重新提取比对。macOS 实验路径（fake 后端/无 readelf）跳过提取并在 verify 显式报告。
+- **断点续传**：`net::get_to_file` 状态机——目标非空时发 Range；206 续传完成；`CURLE_RANGE_ERROR`（libcurl 保证未写入）或 416 回退全量；4xx 删除；网络中断保留 partial。最终由 FallbackSourceResolver 全量 sha256 校验兜底（续传无法绕过内容寻址）。
+- **矩阵失败语义**：目标族 dep-scan 镜像锁定失败 = 硬失败；辅助族 = 跳过并记入账本 `dep_scan_skipped`（"跳过即记录"）。
 - **变体合并**：`[variant.<gpu>]` 在 TOML 层深合并（标量/数组替换、表递归、未提及继承）——"按发行版/GPU 特调"是同一模板的不同求值。
 - **dep-scan**：装配产物字节跨发行版相同，差异收敛到矩阵容器内的 ELF 依赖扫描 → 每发行版专属依赖清单（"带完美依赖"的机制载体）。
 - **用户模板状态机**：Active --心跳超 7 天--> HalfDead --恢复--> Active；HalfDead --超 30 天--> Archived（"人死删包"=隐藏封存，文件不删除）。服务端协议见 [REPO-PROTOCOL.md](REPO-PROTOCOL.md)。
@@ -64,4 +67,10 @@ tests/e2e/e2e.sh build/src/cli/w2ucem-cli   # 容器 e2e（Linux + docker）
 
 ## alpha 后置（明确不做，非缺陷）
 
-服务端全套（仓库/Archive/审核/心跳 API）、编译型模板（kind=compile）、符号表快照比对、矩阵全量（alpha 打通 2 cell）、断点续传、真实 GPU 特调运行、deb/rpm 打包、QT/GTK/SwiftUI 前端、插件市场、WASM script 步骤。
+服务端全套（仓库/Archive/审核/心跳 API）、编译型模板（kind=compile）、真实 GPU 特调运行、deb/rpm 打包、QT/GTK/SwiftUI 前端、插件市场、WASM script 步骤。
+
+## 已知限制
+
+- 并发构建共享源缓存时对同一 `.download` 文件的 append 竞争（跨进程续传）：后续以 O_EXCL 锁文件解决。
+- macOS 实验路径（fake 后端）跳过 dep-scan 与 symtab 提取：跨工具链（llvm-nm vs GNU readelf）比对假阳性大于无校验；HostSymtabExtractor 留有后门。
+- `--distro-matrix` 下 fedora/archlinux 基础镜像为滚动 latest：e2e 运行期非完全密封，官方发布矩阵镜像后以 digest 锁定。

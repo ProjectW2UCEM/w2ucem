@@ -128,6 +128,11 @@ Result<void> TemplateValidator::validate(const Template& tpl) {
       return tl::unexpected(
           Error::make(ErrorCode::SchemaViolation, "manifest.files 的 path 不能为空", ctx));
     }
+    if (!f.symtab.empty() && f.symtab != "dyn" && f.symtab != "full") {
+      return tl::unexpected(Error::make(
+          ErrorCode::SchemaViolation,
+          "manifest.files 的 symtab 须为 \"\"|\"dyn\"|\"full\"（当前: '" + f.symtab + "'）", ctx));
+    }
   }
 
   return {};

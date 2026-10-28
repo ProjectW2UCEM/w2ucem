@@ -11,7 +11,10 @@ namespace w2ucem {
 struct ManifestFileSpec {
   std::string path;    // 相对产物根
   std::string sha256;  // 空 = record 模式
-  std::string symtab;  // 预留：符号表快照路径（alpha 不启用）
+  // 符号表校验作用域选择器：""（不校验）| "dyn"（仅 .dynsym 动态符号表）
+  // | "full"（.dynsym + .symtab）。快照位置是 w2ucem 的内部约定
+  // （产物树 .w2ucem/symtab/），模板不声明存储路径。
+  std::string symtab;
 };
 
 struct ManifestSpec {

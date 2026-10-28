@@ -4,6 +4,7 @@
 
 #include "w2ucem/util/fs.hpp"
 #include "w2ucem/util/sha256.hpp"
+#include "w2ucem/verify/symtab.hpp"
 
 namespace w2ucem {
 
@@ -14,11 +15,6 @@ bool VerificationReport::all_ok() const {
     }
   }
   return true;
-}
-
-std::string SymtabChecker::snapshot(const std::string& elf_path) {
-  (void)elf_path;
-  return "";  // alpha 未启用
 }
 
 VerificationReport Verifier::verify_artifacts(const std::string& output_dir,
@@ -94,6 +90,46 @@ VerificationReport Verifier::verify_dep_manifests(const std::string& output_dir,
     } catch (const std::exception& e) {
       report.checks.push_back({"schema: " + rel, false, e.what()});
     }
+  }
+  return report;
+}
+
+VerificationReport Verifier::verify_symtabs(const std::string& output_dir,
+                                            const ManifestSpec& manifest,
+                                            const std::optional<LedgerEntry>& ledger,
+                                            verify::SymtabExtractor* extractor) {
+  VerificationReport report;
+
+  for (const auto& f : manifest.files) {
+    if (f.symtab.empty()) {
+      continue;
+    }
+    // 账本无记录（fake 构建跳过提取 / 首建）：放行
+    const bool has_record = ledger && ledger->symtabs.count(f.path) > 0;
+    if (!has_record) {
+      report.checks.push_back(
+          {"符号表: " + f.path, true, "跳过（账本无记录）"});
+      continue;
+    }
+    if (extractor == nullptr) {
+      report.checks.push_back({"符号表: " + f.path, false,
+                               "无法复验（无容器引擎且宿主无 readelf）"});
+      continue;
+    }
+
+    verify::SymtabChecker checker(extractor);
+    const std::string snapshot = checker.snapshot(f.path, f.symtab);
+    if (snapshot.empty()) {
+      report.checks.push_back({"符号表: " + f.path, false, "提取/规范化失败"});
+      continue;
+    }
+    const std::string actual = Sha256::hex(Sha256::of_bytes(snapshot));
+    const std::string expected = ledger->symtabs.at(f.path);
+    const bool ok = actual == expected;
+    report.checks.push_back(
+        {"符号表: " + f.path, ok,
+         ok ? actual.substr(0, 16) + "…" : "账本 " + expected.substr(0, 16) + "… 实际 " +
+                                               actual.substr(0, 16) + "…"});
   }
   return report;
 }

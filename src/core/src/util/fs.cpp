@@ -59,6 +59,27 @@ Result<std::string> read_file(const std::string& path) {
   return oss.str();
 }
 
+Result<std::uintmax_t> file_size(const std::string& path) {
+  std::error_code ec;
+  const auto size = std::filesystem::file_size(path, ec);
+  if (ec == std::errc::no_such_file_or_directory) {
+    return 0;
+  }
+  if (ec) {
+    return tl::unexpected(Error::make(ErrorCode::Io, "stat 失败: " + ec.message(), path));
+  }
+  return size;
+}
+
+Result<void> remove_file(const std::string& path) {
+  std::error_code ec;
+  std::filesystem::remove(path, ec);
+  if (ec && ec != std::errc::no_such_file_or_directory) {
+    return tl::unexpected(Error::make(ErrorCode::Io, "删除失败: " + ec.message(), path));
+  }
+  return {};
+}
+
 bool exists(const std::string& path) {
   std::error_code ec;
   return std::filesystem::exists(path, ec);

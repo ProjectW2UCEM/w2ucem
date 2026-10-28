@@ -49,6 +49,9 @@ void add_build_commands(CLI::App& app, const std::string& config_path,
     for (const auto& dep : result->dep_manifests) {
       fmt::print("  依赖清单:  {}\n", dep);
     }
+    for (const auto& skipped : result->skipped_dep_scans) {
+      fmt::print("  跳过(镜像锁定失败):  {}\n", skipped);
+    }
   });
 
   // ---------- verify ----------

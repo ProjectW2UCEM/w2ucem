@@ -4,7 +4,10 @@
 #include <ctime>
 #include <sstream>
 
+#include <memory>
+
 #include "w2ucem/archive/fallback_resolver.hpp"
+#include "w2ucem/build/engine_probe.hpp"
 #include "w2ucem/plugin/plugin.hpp"
 #include "w2ucem/repo/repo_client.hpp"
 #include "w2ucem/template/evaluator.hpp"
@@ -17,6 +20,7 @@
 #include "w2ucem/util/logging.hpp"
 #include "w2ucem/util/net.hpp"
 #include "w2ucem/util/sha256.hpp"
+#include "w2ucem/verify/symtab.hpp"
 
 namespace w2ucem::api {
 
@@ -267,6 +271,35 @@ Result<VerificationReport> Facade::verify_template(const std::string& ref,
   if (prior) {
     auto dep_report = Verifier::verify_dep_manifests(output_dir, prior->dep_manifests);
     report.checks.insert(report.checks.end(), dep_report.checks.begin(), dep_report.checks.end());
+    // symtab 复验：声明了 symtab 的条目需要报告（无记录 → "跳过"，有记录 → 容器提取比对）
+    bool has_symtab_declared = false;
+    for (const auto& f : plan->manifest.files) {
+      if (!f.symtab.empty()) {
+        has_symtab_declared = true;
+        break;
+      }
+    }
+    if (has_symtab_declared) {
+      std::unique_ptr<verify::SymtabExtractor> extractor;
+      if (!prior->symtabs.empty()) {
+        auto backend = EngineProbe::select("auto");
+        if (backend) {
+          std::string image_ref = prior->buildenv_ref;
+          if (image_ref.empty() && !prior->images.empty()) {
+            // 旧账本无 buildenv_ref：用 images 首条拼 image@digest
+            image_ref = prior->images.front().first + "@" + prior->images.front().second;
+          }
+          if (!image_ref.empty()) {
+            extractor = std::make_unique<verify::ContainerSymtabExtractor>(
+                **backend, image_ref, output_dir);
+          }
+        }
+      }
+      auto symtab_report =
+          Verifier::verify_symtabs(output_dir, plan->manifest, prior, extractor.get());
+      report.checks.insert(report.checks.end(), symtab_report.checks.begin(),
+                           symtab_report.checks.end());
+    }
   }
   if (!report.all_ok()) {
     return tl::unexpected(Error::make(ErrorCode::VerificationFailed, "校验链失败",

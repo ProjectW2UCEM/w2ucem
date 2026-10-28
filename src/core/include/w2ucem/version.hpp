@@ -8,7 +8,9 @@ namespace w2ucem {
 inline constexpr const char* W2UCEM_VERSION = "0.1.0-alpha";
 
 // 模板求值器语义版本：求值规则变化时必须递增。
-inline constexpr const char* EVALUATOR_VERSION = "0.1";
+// 0.1 → 0.2：manifest.files[].symtab 启用为校验作用域选择器（dyn/full），
+// 并新增符号表快照账本字段（symtabs/symtab_tool/buildenv_ref）。
+inline constexpr const char* EVALUATOR_VERSION = "0.2";
 
 // 模板格式规范版本：与 docs/SPEC.md 对应。
 inline constexpr const char* TEMPLATE_FORMAT_VERSION = "0.1";

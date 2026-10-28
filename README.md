@@ -7,8 +7,9 @@
 ## 设计承诺
 
 - **函数式模板**：模板 = 纯数据（TOML），求值 = 库内锁定的纯函数。同输入必然同产物——可复现性是构造性保证。规范见 [docs/SPEC.md](docs/SPEC.md)。
-- **可复现性校验链**：源/补丁/模板 sha256 强制 + 仓库索引 ed25519 验签 + 构建镜像 digest 锁 + 产物 manifest（pin/record 双模式）+ 全量账本（"源头→用户"证据链）。
-- **时光机仓库**：依赖内容寻址存档；官方源失效自动回退（`archive-check` 诊断）。
+- **可复现性校验链**：源/补丁/模板 sha256 强制 + 仓库索引 ed25519 验签 + 构建镜像 digest 锁 + 产物 manifest（pin/record 双模式）+ **符号表快照比对**（readelf 规范化，跨构建导出面断言）+ 全量账本（"源头→用户"证据链）。
+- **时光机仓库**：依赖内容寻址存档；官方源失效自动回退（`archive-check` 诊断）；大文件下载**断点续传**（Range 206，服务器不支持自动回退全量，最终全量哈希兜底）。
+- **发行版矩阵**：deb/rpm/arch/alpine 四族 dep-scan（readelf 依赖清单），跨族输出确定性；辅助族失败跳过留痕（`dep_scan_skipped`），目标族硬失败。
 - **三通道**（Debian 哲学）：semi-rolling / stable / major。
 - **GPU 特调**：`[variant.<gpu>]` 深合并——同一模板的不同求值。
 - **用户模板体系**（AUR 式）：审核后发布、实验性标记、心跳签到（7 天）、"人死删包"（隐藏封存，文件不删除）。协议见 [docs/REPO-PROTOCOL.md](docs/REPO-PROTOCOL.md)。
