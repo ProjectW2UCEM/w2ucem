@@ -28,12 +28,17 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev libssl-dev zlib1g-dev
+          sudo apt-get install -y cmake libcurl4-openssl-dev libssl-dev zlib1g-dev
       - name: 安装系统依赖（macOS）
         if: runner.os == 'macOS'
-        run: brew install openssl
+        run: brew install cmake openssl
       - name: 配置
         run: |
+          cmake --version
+          if [ "$(uname)" = "Darwin" ]; then
+            # brew 的 openssl 是 keg-only，cmake 默认找不到
+            export OPENSSL_ROOT_DIR="$(brew --prefix openssl)"
+          fi
           cmake -B build -DCMAKE_BUILD_TYPE=Release \
             -DW2UCEM_ENABLE_SANITIZERS=${{ matrix.sanitizers }} \
             ${{ matrix.cmake_args }}
@@ -51,9 +56,11 @@ jobs:
       - name: 安装系统依赖
         run: |
           sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev libssl-dev zlib1g-dev
+          sudo apt-get install -y cmake libcurl4-openssl-dev libssl-dev zlib1g-dev
       - name: 配置构建
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DW2UCEM_BUILD_TUI=OFF -DW2UCEM_BUILD_CAPI=OFF
+        run: |
+          cmake --version
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DW2UCEM_BUILD_TUI=OFF -DW2UCEM_BUILD_CAPI=OFF
       - name: 构建
         run: cmake --build build -j2 --target w2ucem-cli
       - name: CLI 冒烟
@@ -67,9 +74,11 @@ jobs:
       - name: 安装系统依赖
         run: |
           sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev libssl-dev zlib1g-dev
+          sudo apt-get install -y cmake libcurl4-openssl-dev libssl-dev zlib1g-dev
       - name: 配置构建
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DW2UCEM_BUILD_TUI=OFF -DW2UCEM_BUILD_CAPI=OFF
+        run: |
+          cmake --version
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DW2UCEM_BUILD_TUI=OFF -DW2UCEM_BUILD_CAPI=OFF
       - name: 构建
         run: cmake --build build -j2 --target w2ucem-cli
       - name: 容器 e2e
@@ -84,7 +93,7 @@ jobs:
       - name: 安装系统依赖
         run: |
           sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev libssl-dev zlib1g-dev
+          sudo apt-get install -y cmake libcurl4-openssl-dev libssl-dev zlib1g-dev
       - name: 配置构建
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DW2UCEM_BUILD_TESTS=OFF
       - name: 构建
