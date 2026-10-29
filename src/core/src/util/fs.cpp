@@ -1,3 +1,5 @@
+#include <cstdint>
+
 #include "w2ucem/util/fs.hpp"
 
 #include <filesystem>

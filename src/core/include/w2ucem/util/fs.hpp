@@ -4,6 +4,8 @@
 
 #include <string>
 
+#include <cstdint>
+
 #include "w2ucem/util/result.hpp"
 
 namespace w2ucem::fs {

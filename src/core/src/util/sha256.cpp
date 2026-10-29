@@ -1,3 +1,5 @@
+#include <cstdint>
+
 #include "w2ucem/util/sha256.hpp"
 
 #include <array>
