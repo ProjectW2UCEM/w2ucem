@@ -51,13 +51,27 @@ Result<std::string> ContainerCliBackend::pull_image(const std::string& image,
                                                     const std::string& digest) {
   const std::string ref = image + "@" + digest;
 
-  // 先检查本地是否已有该镜像（e2e/本地构建场景：镜像就在 daemon 里，
-  // pull 会走 registry/mirror 反而失败）
-  auto inspect_local = process::run(
+  // 本地命中检查（e2e/本地构建场景：镜像在 daemon 里，pull 走 registry 反而失败）。
+  // 路径 1：按名字 inspect，镜像内容 ID（.Id）== 声明的 digest
+  //（e2e 用内容 ID 锁；Linux 原生 docker 对本地镜像的 RepoDigests 为空）。
+  auto by_name = process::run(
+      {engine_, "image", "inspect", "--format", "{{.Id}}", image}, engine_ + " inspect " + image);
+  if (by_name && by_name->exit_code == 0) {
+    std::string id = by_name->output;
+    while (!id.empty() && (id.back() == '\n' || id.back() == '\r')) {
+      id.pop_back();
+    }
+    if (id == digest) {
+      return digest;
+    }
+  }
+
+  // 路径 2：按 digest 引用 inspect（manifest digest 场景：真实 registry 锁）。
+  auto by_ref = process::run(
       {engine_, "image", "inspect", "--format", "{{index .RepoDigests 0}}", ref},
       engine_ + " inspect " + ref);
-  if (inspect_local && inspect_local->exit_code == 0) {
-    std::string actual = inspect_local->output;
+  if (by_ref && by_ref->exit_code == 0) {
+    std::string actual = by_ref->output;
     while (!actual.empty() && (actual.back() == '\n' || actual.back() == '\r')) {
       actual.pop_back();
     }
