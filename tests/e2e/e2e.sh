@@ -8,21 +8,14 @@
 # 用法: tests/e2e/e2e.sh <w2ucem-cli 可执行文件> [fixtures_dir]
 set -euo pipefail
 
-# CI 诊断：完整输出 tee 进 step summary（Actions 页面无需展开日志即可见）
-if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
-  exec > >(tee -a "$GITHUB_STEP_SUMMARY") 2>&1
-fi
-
 CLI="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 FIX="${2:-$ROOT_DIR/tests/fixtures}"
 
 fail() {
   echo "FAIL: $1" >&2
-  # CI 诊断：失败断言写进 step summary（Actions 页面直接可见）
-  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
-    echo "### e2e FAIL: $1" >> "$GITHUB_STEP_SUMMARY"
-  fi
+  # GitHub 原生 annotation：页面直接可见
+  echo "::error::e2e FAIL: $1"
   exit 1
 }
 step() {
@@ -31,7 +24,8 @@ step() {
 
 # ---------- 1. 构建本地镜像（真实 digest） ----------
 step "构建 buildenv 镜像（Alpine + tar）"
-docker build --platform linux/amd64 -q -t w2ucem/buildenv-alpine "$ROOT_DIR/ci/buildenv" >/dev/null
+docker build --platform linux/amd64 -q -t w2ucem/buildenv-alpine "$ROOT_DIR/ci/buildenv" >/dev/null \
+  || fail "buildenv 镜像构建失败"
 # 镜像内容 ID（sha256:...）：本地构建即有；RepoDigests 仅 push 后填充
 # （Linux 原生 docker 对本地镜像返回空数组）
 BUILDENV_DIGEST="$(docker image inspect w2ucem/buildenv-alpine --format '{{.Id}}')"
@@ -45,7 +39,8 @@ MATRIX_IMAGE[rpm]="w2ucem/matrix-fedora"
 MATRIX_IMAGE[arch]="w2ucem/matrix-archlinux"
 MATRIX_IMAGE[alpine]="w2ucem/matrix-alpine"
 for fam in deb rpm arch alpine; do
-  docker build --platform linux/amd64 -q -t "${MATRIX_IMAGE[$fam]}" "$ROOT_DIR/ci/matrix-$fam" >/dev/null
+  docker build --platform linux/amd64 -q -t "${MATRIX_IMAGE[$fam]}" "$ROOT_DIR/ci/matrix-$fam" >/dev/null \
+    || fail "matrix-$fam 镜像构建失败"
   MATRIX_DIGEST[$fam]="$(docker image inspect "${MATRIX_IMAGE[$fam]}" --format '{{.Id}}')"
   [ -n "${MATRIX_DIGEST[$fam]}" ] || fail "无法获取 $fam digest"
   echo "  matrix $fam digest: ${MATRIX_DIGEST[$fam]}"
@@ -55,10 +50,11 @@ done
 step "生成 fixtures（真实 digest 注入 + mockelf）"
 if [ -x "$ROOT_DIR/tests/fixtures/elf/gen_elf.sh" ] && command -v readelf >/dev/null; then
   # 仅 Linux（有 readelf）重新生成：macOS 的 clang 会产出 Mach-O 覆盖 ELF
-  "$ROOT_DIR/tests/fixtures/elf/gen_elf.sh" >/dev/null
+  "$ROOT_DIR/tests/fixtures/elf/gen_elf.sh" >/dev/null || fail "gen_elf 失败"
 fi
 rm -rf "$FIX/repo" "$FIX/keys"
-"$ROOT_DIR/tests/fixtures/gen_fixture_repo.sh" "$FIX" "$BUILDENV_DIGEST" >/dev/null
+"$ROOT_DIR/tests/fixtures/gen_fixture_repo.sh" "$FIX" "$BUILDENV_DIGEST" >/dev/null \
+  || fail "fixtures 生成失败"
 
 # 动态矩阵表（W2UCEM_MATRIX_FILE 覆盖编译默认值）
 MATRIX_FILE="$(mktemp)"
