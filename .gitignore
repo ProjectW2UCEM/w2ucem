@@ -1,7 +1,8 @@
-# 构建产物
-build/
-build-*/
-cmake-build-*/
+# 构建产物（仅根目录——注意：无前导斜杠的 build/ 会误伤
+# src/core/src/build/ 源码目录，见 git history 的教训）
+/build/
+/build-*/
+/cmake-build-*/
 
 # IDE
 .idea/
