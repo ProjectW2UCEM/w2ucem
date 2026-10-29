@@ -51,6 +51,25 @@ Result<std::string> ContainerCliBackend::pull_image(const std::string& image,
                                                     const std::string& digest) {
   const std::string ref = image + "@" + digest;
 
+  // 先检查本地是否已有该镜像（e2e/本地构建场景：镜像就在 daemon 里，
+  // pull 会走 registry/mirror 反而失败）
+  auto inspect_local = process::run(
+      {engine_, "image", "inspect", "--format", "{{index .RepoDigests 0}}", ref},
+      engine_ + " inspect " + ref);
+  if (inspect_local && inspect_local->exit_code == 0) {
+    std::string actual = inspect_local->output;
+    while (!actual.empty() && (actual.back() == '\n' || actual.back() == '\r')) {
+      actual.pop_back();
+    }
+    const auto at = actual.rfind('@');
+    if (at != std::string::npos) {
+      actual = actual.substr(at + 1);
+    }
+    if (!actual.empty()) {
+      return actual;
+    }
+  }
+
   auto pull = process::run({engine_, "image", "pull", ref}, engine_ + " pull " + ref);
   if (!pull) {
     return tl::unexpected(std::move(pull.error()));

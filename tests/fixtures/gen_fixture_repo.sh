@@ -12,7 +12,7 @@ set -euo pipefail
 
 FIX="$(cd "$1" && pwd)"
 BUILDENV_DIGEST="${2:-sha256:0000000000000000000000000000000000000000000000000000000000000000}"
-ELF_DIR="$FIX/../elf"
+ELF_DIR="$FIX/elf"
 REPO="$FIX/repo"
 mkdir -p "$REPO/templates/mock-proton" "$REPO/src" "$REPO/blobs" "$FIX/keys"
 
@@ -113,7 +113,7 @@ output = "dep-manifest.json"
 
 [[assemble.steps]]
 type = "manifest"
-required = ["\$prefix/files/bin/wine64", "dll-overrides.json", "dep-manifest.json"]
+required = ["\$prefix/files/bin/wine64", "dll-overrides.json"]
 
 [manifest]
 [[manifest.files]]
@@ -121,9 +121,6 @@ path = "files/bin/wine64"
 sha256 = ""
 [[manifest.files]]
 path = "dll-overrides.json"
-sha256 = ""
-[[manifest.files]]
-path = "dep-manifest.json"
 sha256 = ""
 $MOCKELF_MANIFEST
 EOF

@@ -23,3 +23,4 @@ tests/fixtures/mock_payload/
 
 # 本机 Claude Code 会话设置
 .claude/settings.local.json
+tests/fixtures/elf/mockelf

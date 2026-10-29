@@ -22,7 +22,7 @@ step() {
 
 # ---------- 1. 构建本地镜像（真实 digest） ----------
 step "构建 buildenv 镜像（Alpine + tar）"
-docker build -q -t w2ucem/buildenv-alpine "$ROOT_DIR/ci/buildenv" >/dev/null
+docker build --platform linux/amd64 -q -t w2ucem/buildenv-alpine "$ROOT_DIR/ci/buildenv" >/dev/null
 BUILDENV_DIGEST="$(docker image inspect w2ucem/buildenv-alpine \
   --format '{{index .RepoDigests 0}}' | sed 's/.*@//')"
 [ -n "$BUILDENV_DIGEST" ] || fail "无法获取 buildenv digest"
@@ -35,7 +35,7 @@ MATRIX_IMAGE[rpm]="w2ucem/matrix-fedora"
 MATRIX_IMAGE[arch]="w2ucem/matrix-archlinux"
 MATRIX_IMAGE[alpine]="w2ucem/matrix-alpine"
 for fam in deb rpm arch alpine; do
-  docker build -q -t "${MATRIX_IMAGE[$fam]}" "$ROOT_DIR/ci/matrix-$fam" >/dev/null
+  docker build --platform linux/amd64 -q -t "${MATRIX_IMAGE[$fam]}" "$ROOT_DIR/ci/matrix-$fam" >/dev/null
   MATRIX_DIGEST[$fam]="$(docker image inspect "${MATRIX_IMAGE[$fam]}" \
     --format '{{index .RepoDigests 0}}' | sed 's/.*@//')"
   [ -n "${MATRIX_DIGEST[$fam]}" ] || fail "无法获取 $fam digest"
@@ -44,7 +44,8 @@ done
 
 # ---------- 2. fixtures（digest 注入 + mockelf） ----------
 step "生成 fixtures（真实 digest 注入 + mockelf）"
-if [ -x "$ROOT_DIR/tests/fixtures/elf/gen_elf.sh" ]; then
+if [ -x "$ROOT_DIR/tests/fixtures/elf/gen_elf.sh" ] && command -v readelf >/dev/null; then
+  # 仅 Linux（有 readelf）重新生成：macOS 的 clang 会产出 Mach-O 覆盖 ELF
   "$ROOT_DIR/tests/fixtures/elf/gen_elf.sh" >/dev/null
 fi
 rm -rf "$FIX/repo" "$FIX/keys"
@@ -159,18 +160,26 @@ PYEOF
 # 恢复：重建一次（好账本）
 "$CLI" --root "$WORK" build mock-proton --target semi-rolling:generic:deb:stable >/dev/null 2>&1
 
-# ---------- 4. 负例：篡改 tarball → HashMismatch ----------
-step "篡改源 tarball → HashMismatch"
+# ---------- 4. 篡改官方源：时光机回退拯救（正例） + 坏哈希（负例） ----------
+step "篡改官方源 → 时光机回退拯救"
 WORK2="$(mktemp -d)"
 mkdir -p "$WORK2/trust"
 cp "$FIX/keys/pubkey.pem" "$WORK2/trust/pubkey.pem"
 "$CLI" --root "$WORK2" sync --repo "file://$FIX/repo" >/dev/null
-# 破坏缓存外的下载：篡改 repo 里的 tarball 但保留 blob 用于 archive-check
+# Archive 回退源指向本地 blob 目录（alpha 无真实 Archive 服务端）
+cat >> "$WORK2/config.toml" <<CFGEOF
+archive_urls = ["file://$FIX/repo"]
+CFGEOF
 cp "$FIX/repo/src/mock-proton-1.0.tar.gz" "$FIX/repo/src/mock-proton-1.0.tar.gz.bak"
 printf 'tamper' >> "$FIX/repo/src/mock-proton-1.0.tar.gz"
-"$CLI" --root "$WORK2" fetch mock-proton --target semi-rolling:generic:deb:stable 2>&1 \
-  | grep -q "hash-mismatch" || fail "坏哈希源未被拦截"
+# 官方源已坏 → Archive blob（原版）自动接管 → fetch 成功
+"$CLI" --root "$WORK2" fetch mock-proton --target semi-rolling:generic:deb:stable \
+  | grep -q "已校验" || fail "时光机回退未接管"
 mv "$FIX/repo/src/mock-proton-1.0.tar.gz.bak" "$FIX/repo/src/mock-proton-1.0.tar.gz"
+
+step "坏哈希源（无 Archive 回退）→ HashMismatch"
+"$CLI" --root "$WORK2" fetch bad-hash --target semi-rolling:generic:deb:stable 2>&1 \
+  | grep -q "hash-mismatch" || fail "坏哈希源未被拦截"
 rm -rf "$WORK2"
 
 # ---------- 5. 回退例：上游全 404 → 时光机 ----------

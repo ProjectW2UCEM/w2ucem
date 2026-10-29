@@ -280,10 +280,13 @@ Result<VerificationReport> Facade::verify_template(const std::string& ref,
       }
     }
     if (has_symtab_declared) {
+      // backend 的所有权必须在 extractor 使用期间存活（extractor 持有其引用）
+      std::shared_ptr<ContainerBackend> backend;
       std::unique_ptr<verify::SymtabExtractor> extractor;
       if (!prior->symtabs.empty()) {
-        auto backend = EngineProbe::select("auto");
-        if (backend) {
+        auto backend_r = EngineProbe::select("auto");
+        if (backend_r) {
+          backend = *backend_r;
           std::string image_ref = prior->buildenv_ref;
           if (image_ref.empty() && !prior->images.empty()) {
             // 旧账本无 buildenv_ref：用 images 首条拼 image@digest
@@ -291,7 +294,7 @@ Result<VerificationReport> Facade::verify_template(const std::string& ref,
           }
           if (!image_ref.empty()) {
             extractor = std::make_unique<verify::ContainerSymtabExtractor>(
-                **backend, image_ref, output_dir);
+                *backend, image_ref, output_dir);
           }
         }
       }
