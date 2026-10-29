@@ -85,7 +85,11 @@ step "sync（验签）"
 
 step "build（digest 锁 + 容器装配 + 四族 dep-scan）"
 "$CLI" --root "$WORK" build mock-proton --target semi-rolling:generic:deb:stable --distro-matrix \
-  | grep -q "构建完成" || fail "build 失败"
+  > /tmp/w2ucem-build.out 2>&1 || {
+    echo "::error::build 失败: $(tail -4 /tmp/w2ucem-build.out | tr '\n' ' ')"
+    fail "build 失败"
+  }
+grep -q "构建完成" /tmp/w2ucem-build.out || fail "build 未完成"
 
 # 产物与依赖清单
 step "断言产物树与 dep-manifest"
