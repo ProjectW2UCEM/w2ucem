@@ -14,6 +14,10 @@ FIX="${2:-$ROOT_DIR/tests/fixtures}"
 
 fail() {
   echo "FAIL: $1" >&2
+  # CI 诊断：失败断言写进 step summary（Actions 页面直接可见）
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+    echo "### e2e FAIL: $1" >> "$GITHUB_STEP_SUMMARY"
+  fi
   exit 1
 }
 step() {
