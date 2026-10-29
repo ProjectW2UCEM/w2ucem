@@ -27,8 +27,9 @@ step() {
 # ---------- 1. 构建本地镜像（真实 digest） ----------
 step "构建 buildenv 镜像（Alpine + tar）"
 docker build --platform linux/amd64 -q -t w2ucem/buildenv-alpine "$ROOT_DIR/ci/buildenv" >/dev/null
-BUILDENV_DIGEST="$(docker image inspect w2ucem/buildenv-alpine \
-  --format '{{index .RepoDigests 0}}' | sed 's/.*@//')"
+# 镜像内容 ID（sha256:...）：本地构建即有；RepoDigests 仅 push 后填充
+# （Linux 原生 docker 对本地镜像返回空数组）
+BUILDENV_DIGEST="$(docker image inspect w2ucem/buildenv-alpine --format '{{.Id}}')"
 [ -n "$BUILDENV_DIGEST" ] || fail "无法获取 buildenv digest"
 echo "  buildenv digest: $BUILDENV_DIGEST"
 
@@ -40,8 +41,7 @@ MATRIX_IMAGE[arch]="w2ucem/matrix-archlinux"
 MATRIX_IMAGE[alpine]="w2ucem/matrix-alpine"
 for fam in deb rpm arch alpine; do
   docker build --platform linux/amd64 -q -t "${MATRIX_IMAGE[$fam]}" "$ROOT_DIR/ci/matrix-$fam" >/dev/null
-  MATRIX_DIGEST[$fam]="$(docker image inspect "${MATRIX_IMAGE[$fam]}" \
-    --format '{{index .RepoDigests 0}}' | sed 's/.*@//')"
+  MATRIX_DIGEST[$fam]="$(docker image inspect "${MATRIX_IMAGE[$fam]}" --format '{{.Id}}')"
   [ -n "${MATRIX_DIGEST[$fam]}" ] || fail "无法获取 $fam digest"
   echo "  matrix $fam digest: ${MATRIX_DIGEST[$fam]}"
 done
