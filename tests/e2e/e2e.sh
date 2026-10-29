@@ -8,6 +8,11 @@
 # 用法: tests/e2e/e2e.sh <w2ucem-cli 可执行文件> [fixtures_dir]
 set -euo pipefail
 
+# CI 诊断：完整输出 tee 进 step summary（Actions 页面无需展开日志即可见）
+if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+  exec > >(tee -a "$GITHUB_STEP_SUMMARY") 2>&1
+fi
+
 CLI="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 FIX="${2:-$ROOT_DIR/tests/fixtures}"
