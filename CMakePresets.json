@@ -1,0 +1,89 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "Debug",
+      "displayName": "Debug",
+      "description": "调试构建（含单元测试、TUI、C ABI）",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "W2UCEM_BUILD_TESTS": "ON",
+        "W2UCEM_BUILD_TUI": "ON",
+        "W2UCEM_BUILD_CAPI": "ON",
+        "W2UCEM_ENABLE_SANITIZERS": "OFF"
+      }
+    },
+    {
+      "name": "Release",
+      "displayName": "Release",
+      "description": "发布构建（含单元测试、TUI、C ABI）",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "W2UCEM_BUILD_TESTS": "ON",
+        "W2UCEM_BUILD_TUI": "ON",
+        "W2UCEM_BUILD_CAPI": "ON",
+        "W2UCEM_ENABLE_SANITIZERS": "OFF"
+      }
+    },
+    {
+      "name": "Sanitize",
+      "displayName": "Sanitize",
+      "description": "ASan/UBSan 调试构建（对齐 CI 的 sanitizer job；跳过 FTXUI 加速迭代）",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/sanitize",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "W2UCEM_BUILD_TESTS": "ON",
+        "W2UCEM_BUILD_TUI": "OFF",
+        "W2UCEM_BUILD_CAPI": "ON",
+        "W2UCEM_ENABLE_SANITIZERS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "Debug",
+      "configurePreset": "Debug"
+    },
+    {
+      "name": "Release",
+      "configurePreset": "Release"
+    },
+    {
+      "name": "Sanitize",
+      "configurePreset": "Sanitize"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "Debug",
+      "configurePreset": "Debug",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error", "stopOnFailure": false }
+    },
+    {
+      "name": "Release",
+      "configurePreset": "Release",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error", "stopOnFailure": false }
+    },
+    {
+      "name": "Sanitize",
+      "configurePreset": "Sanitize",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error", "stopOnFailure": false }
+    }
+  ]
+}

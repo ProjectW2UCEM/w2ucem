@@ -1,0 +1,42 @@
+{
+  // W2UCEM 开发容器（Dev Container）—— Ubuntu 26.04，兼容 Docker / Docker Rootless / Podman 三种宿主运行时。
+  "name": "w2ucem-dev-ubuntu-2604",
+
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+
+  // 非 root 用户：rootless 运行时（Docker Rootless / Podman）下挂载卷文件属主正确的前提。
+  // 复用 Dockerfile 中 Ubuntu 镜像内置的 ubuntu 用户（UID 1000）。
+  "remoteUser": "ubuntu",
+
+  // 三运行时兼容要点（有意为之，勿改）：
+  //  1. remoteUser 非 root   → rootless 运行时的 UID 映射正确
+  //  2. 用 build.dockerfile   → 不依赖 docker-compose（Podman 需额外插件）
+  //  3. 不用需要特权/Docker 特有特性的 features → 保证跨运行时一致
+  //
+  // 容器内已装 rootless podman（podman-docker 提供 docker 别名），无需宿主 socket。
+  // 如需容器内直连宿主引擎（替代容器内 rootless podman），取消下面注释并挂载对应 socket：
+  //   Docker           → 挂载 /var/run/docker.sock:/var/run/docker.sock
+  //   Docker Rootless  → 挂载 $XDG_RUNTIME_DIR/docker.sock（通常 /run/user/1000/docker.sock）
+  //   Podman           → 挂载 $XDG_RUNTIME_DIR/podman/podman.sock:/run/podman/podman.sock
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "twxs.cmake",
+        "vadimcn.vscode-lldb"
+      ],
+      "settings": {
+        "cmake.buildDirectory": "${workspaceFolder}/build",
+        "cmake.generator": "Ninja"
+      }
+    }
+  },
+
+  // 首次创建容器后打印环境诊断（不自动 configure：FetchContent 首次拉取依赖耗时，
+  // 交给用户显式构建，避免 postCreate 超时）。
+  "postCreateCommand": "echo '=== w2ucem Dev Container (Ubuntu 26.04) ready ==='; cmake --version | head -1; g++ --version | head -1; ninja --version; podman --version; echo; echo '构建: cmake -B build -G Ninja && cmake --build build -j && ctest --test-dir build'"
+}

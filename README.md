@@ -21,9 +21,15 @@
 # 依赖：cmake ≥3.20、C++20 编译器、libcurl/OpenSSL/zlib 开发包
 sudo apt install libcurl4-openssl-dev libssl-dev zlib1g-dev   # Debian 系
 
+# 方式一：CMake Presets（推荐，CLion / VS Code 原生支持）
+cmake --preset Debug                 # Debug / Release / Sanitize
+cmake --build --preset Debug -j
+ctest --preset Debug                 # 单元测试
+
+# 方式二：手动 configure
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
-ctest --test-dir build                                        # 单元测试
+ctest --test-dir build               # 单元测试
 
 # 使用（以测试仓库为例）
 tests/fixtures/gen_fixture_repo.sh tests/fixtures             # 生成测试仓库
@@ -39,6 +45,36 @@ build/src/cli/w2ucem-cli ledger
 ```
 
 macOS 上 CLI 可运行，容器构建路径（需 colima/Docker Desktop）为实验性；无引擎时 `--engine fake` 在宿主直跑（dep-scan 跳过）。
+
+## Dev Container 开发（Ubuntu 26.04）
+
+`.devcontainer/` 提供开箱即用的开发容器，基础镜像 **Ubuntu 26.04 LTS**，兼容三种宿主运行时：**Docker / Docker Rootless / Podman**。
+
+```bash
+# 任一运行时启动（以 devcontainer CLI 为例，自动探测 Docker / Podman）
+devcontainer up --workspace-folder .
+```
+
+容器内预装：gcc/g++（C++20）、CMake ≥3.20、Ninja、libcurl/OpenSSL/zlib 开发包、git、binutils（readelf）、gdb、python3，以及 rootless podman（`podman-docker` 提供 `docker` 别名）。
+
+关键兼容设计：
+
+- **全程非 root 用户** `ubuntu`（UID 1000）——rootless 运行时下挂载卷文件属主正确的前提。
+- **用 `build.dockerfile` 而非 docker-compose**——避免 Podman 的 compose 插件依赖。
+- **不用需要特权或 Docker 特有特性的 features**——保证三种运行时行为一致。
+
+进入容器后：
+
+```bash
+cmake -B build -G Ninja
+cmake --build build -j
+ctest --test-dir build                              # 单元测试
+./tests/cli/smoke.sh build/src/cli/w2ucem-cli       # CLI 冒烟
+```
+
+> 容器内再起容器（`w2ucem-cli build --engine docker/podman`、`tests/e2e/e2e.sh`）依赖宿主的嵌套 user-ns 与 `/dev/fuse` 支持；不满足时用 `--engine fake`（宿主直跑），或在 `devcontainer.json` 中挂载宿主 docker/podman socket。全量容器 e2e 建议在 CI（`.github/workflows/ci.yml`）跑。
+>
+> 首次 `cmake` configure 会通过 FetchContent 从 GitHub 拉取锁定依赖（toml11 / nlohmann-json / fmt / tl-expected / CLI11 / FTXUI / Catch2），需要容器内可访问 GitHub。若宿主经代理访问外网，需在 `devcontainer.json` 的 `containerEnv` 中设置 `HTTP_PROXY`/`HTTPS_PROXY`（并注意容器内无法直连宿主的 `127.0.0.1`，改用 `host.docker.internal` 或 host 网络）。
 
 ## 命令面
 

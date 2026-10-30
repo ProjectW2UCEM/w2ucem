@@ -154,7 +154,9 @@ TEST_CASE("续传：全新下载") {
 
   const auto dst = dir.file("out.bin");
   const auto r = net::get_to_file(server.url(), dst);
-  INFO("下载错误: " << r.error().message << " [" << r.error().context << "]");
+  if (!r) {
+    INFO("下载错误: " << r.error().message << " [" << r.error().context << "]");
+  }
   REQUIRE(r);
   REQUIRE(fs::read_file(dst));
   REQUIRE(*fs::read_file(dst) == payload);
@@ -187,7 +189,9 @@ TEST_CASE("续传：服务器忽略 Range（200 全量）→ 回退无拼接污�
   write_file(dst, payload.substr(0, 16 * 1024));
 
   const auto r = net::get_to_file(server.url(), dst);
-  INFO("下载错误: " << r.error().message << " [" << r.error().context << "]");
+  if (!r) {
+    INFO("下载错误: " << r.error().message << " [" << r.error().context << "]");
+  }
   REQUIRE(r);
   const auto result = fs::read_file(dst);
   REQUIRE(result);

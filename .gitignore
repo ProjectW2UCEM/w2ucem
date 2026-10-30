@@ -4,8 +4,10 @@
 /build-*/
 /cmake-build-*/
 
-# IDE
-.idea/
+# IDE（保留 CLion 共享运行配置；其余本地配置不入库）
+.idea/*
+!.idea/runConfigurations/
+!.idea/runConfigurations/*
 .vscode/
 *.user
 cmake-build-debug/

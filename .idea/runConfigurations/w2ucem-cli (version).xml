@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="w2ucem-cli (version)" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="version" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" WORKING_DIR="file://$PROJECT_DIR$" PASS_PARENT_ENVS_2="true" PROJECT_NAME="w2ucem" TARGET_NAME="w2ucem-cli" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="w2ucem" RUN_TARGET_NAME="w2ucem-cli">
+    <method v="2">
+      <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+    </method>
+  </configuration>
+</component>
