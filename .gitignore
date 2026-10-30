@@ -4,8 +4,15 @@
 /build-*/
 /cmake-build-*/
 
-# IDE（保留 CLion 共享运行配置；其余本地配置不入库）
+# IDE（提交 CLion 共享配置；忽略个人/本地配置 workspace.xml、editor.xml、shelf 等）
 .idea/*
+!.idea/misc.xml
+!.idea/modules.xml
+!.idea/vcs.xml
+!.idea/w2ucem.iml
+!.idea/.gitignore
+!.idea/codeStyles/
+!.idea/codeStyles/*
 !.idea/runConfigurations/
 !.idea/runConfigurations/*
 .vscode/
