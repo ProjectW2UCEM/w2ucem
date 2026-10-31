@@ -46,6 +46,40 @@ build/src/cli/w2ucem-cli ledger
 
 macOS 上 CLI 可运行，容器构建路径（需 colima/Docker Desktop）为实验性；无引擎时 `--engine fake` 在宿主直跑（dep-scan 跳过）。
 
+## CLion 一键构建 / 运行
+
+项目已提交 CLion 共享配置（`.idea/`），打开即用，无需手动 `cmake`：
+
+1. **打开**：CLion 打开仓库根目录，自动从 `CMakePresets.json` 导入 **Debug / Release / Sanitize** 三个 CMake Profile（默认选中 Debug，二进制输出到 `build/debug/`）。
+2. **一键构建**：点工具栏锤子图标（或 `Ctrl+F9`）构建全部目标（`w2ucem-cli` / `w2ucem-tui` / `w2ucem_core` / `w2ucem_capi`）。
+3. **一键运行**：右上角运行配置下拉框选一个配置，点运行（`Shift+F10`）。已预置：
+
+   | 运行配置 | 命令 | 说明 |
+   |---|---|---|
+   | `w2ucem-cli (help)` | `--help` | 查看全部命令面 |
+   | `w2ucem-cli (version)` | `version` | 版本信息 |
+   | `w2ucem-cli (doctor)` | `doctor` | 环境自检（引擎/镜像/数据目录/仓库连通） |
+   | `w2ucem-tui` | — | 四区 TUI，**外部终端**全屏运行 |
+   | `w2ucem-cli (sync)` | `sync --repo file://$PROJECT_DIR$/tests/fixtures/repo` | 演示工作流第一步 |
+   | `w2ucem-cli (search)` | `search mock` | 搜索模板 |
+   | `w2ucem-cli (info)` | `info mock-proton --target semi-rolling:generic:deb:stable` | 模板详情 + 求值预览 |
+   | `w2ucem-cli (fetch)` | `fetch mock-proton` | 只下载校验源，不构建 |
+   | `w2ucem-cli (build)` | `build mock-proton --engine fake` | 核心构建（`fake` 宿主直跑，无需容器） |
+   | `w2ucem-cli (verify)` | `verify mock-proton` | 产物校验链 |
+   | `w2ucem-cli (ledger)` | `ledger` | 可复现性账本 |
+
+   `sync` 起的演示工作流运行配置用 README 快速开始的 `mock-proton` 示例参数，需先一次性生成测试仓库与公钥：
+
+   ```bash
+   tests/fixtures/gen_fixture_repo.sh tests/fixtures
+   mkdir -p ~/.local/share/w2ucem/trust
+   cp tests/fixtures/keys/pubkey.pem ~/.local/share/w2ucem/trust/pubkey.pem
+   ```
+
+   然后按 `sync → search → info → fetch → build → verify → ledger` 顺序逐条点击运行配置即可跑通演示。`build` 默认 `--engine fake`；有引擎时在运行配置的 **Program arguments** 里改成 `docker` / `podman`。
+
+> 注意：`w2ucem-tui` 是 FTXUI 全屏界面，已在运行配置中设 `USE_EXTERNAL_CONSOLE=true`，需在真实终端运行；若改用内嵌 Run 控制台会因非 TTY 渲染异常。
+
 ## Dev Container 开发（Ubuntu 26.04）
 
 `.devcontainer/` 提供开箱即用的开发容器，基础镜像 **Ubuntu 26.04 LTS**，兼容三种宿主运行时：**Docker / Docker Rootless / Podman**。
